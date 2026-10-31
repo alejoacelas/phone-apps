@@ -55,10 +55,10 @@ they are served as short, self-contained passages under a daily time budget.
 
 ## Build and install
 
-Connect with `~/best/dotfiles/bin/adb-phone`. Set `JAVA_HOME` to
+Connect with `~/best/stash/dotfiles/bin/adb-phone`. Set `JAVA_HOME` to
 `/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home` and `ANDROID_HOME`
 to `~/Library/Android/sdk`, run `./gradlew assembleDebug`, then
-`~/best/dotfiles/bin/adb-phone install -r app/build/outputs/apk/debug/app-debug.apk`.
+`~/best/stash/dotfiles/bin/adb-phone install -r app/build/outputs/apk/debug/app-debug.apk`.
 The README covers adding books and feeds.
 
 The app also runs on Alejo's Boox Go7 as its home screen; changes to shared screens
@@ -83,7 +83,7 @@ text, so they stay in the ignored `packs/`.
 | `YOUTUBE_API_KEY` | `YOUTUBE_API_KEY — 2026-09-morning-reader` (`xwm7xqceh6je7wnnghhfqmpfue`; Google Cloud project `morning-reader-27191`, `alejoacelas@gmail.com`) |
 | `GITHUB_ISSUES_TOKEN` | `GITHUB_ISSUES_TOKEN — 2026-09-morning-reader` (`n2bc52jki6ebzrstlw2hg25ure`; fine-grained token for this repository only, Issues read and write, expires 2027-10-09) |
 
-Load the Anthropic key with `~/best/dotfiles/bin/op-agent` from `mac-agents`.
+Load the Anthropic key with `~/best/stash/dotfiles/bin/op-agent` from `mac-agents`.
 Use its item ID with `op-agent read` or `op-agent inject` to rebuild the ignored `.env`.
 The YouTube and GitHub credentials remain in the locations above.
 

@@ -9,13 +9,13 @@ done with this, and Today orders books by that choice.
 ## Build and install
 
 Requires JDK 17 and the Android SDK (see `AGENTS.md` for paths) and the phone
-reachable through `~/best/dotfiles/bin/adb-phone`.
+reachable through `~/best/stash/dotfiles/bin/adb-phone`.
 
 ```bash
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
 export ANDROID_HOME=~/Library/Android/sdk
 ./gradlew assembleDebug
-~/best/dotfiles/bin/adb-phone install -r app/build/outputs/apk/debug/app-debug.apk
+~/best/stash/dotfiles/bin/adb-phone install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ## Boox e-reader
@@ -36,7 +36,7 @@ After installing on the Boox, Boox may mark the app disabled; enable it and make
 the home screen with:
 
 ```bash
-b() { PHONE_SERIAL=ec27fd9 ~/best/dotfiles/bin/adb-phone "$@"; }
+b() { PHONE_SERIAL=ec27fd9 ~/best/stash/dotfiles/bin/adb-phone "$@"; }
 b shell pm enable com.alejoacelas.morningreader
 b shell am start -n com.alejoacelas.morningreader/.MainActivity   # registers the home screen
 b shell cmd package set-home-activity com.alejoacelas.morningreader/.Home

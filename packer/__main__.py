@@ -35,7 +35,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PACKS = ROOT / "packs"
 PACKAGE = "com.alejoacelas.morningreader"
 PHONE_DIR = f"/sdcard/Android/data/{PACKAGE}/files"
-ADB_PHONE = Path.home() / "best/dotfiles/bin/adb-phone"
+ADB_PHONE = Path.home() / "best/stash/dotfiles/bin/adb-phone"
 BOOX_SERIAL = "ec27fd9"
 BOOX_LIBRARY = "/sdcard/Books"
 
