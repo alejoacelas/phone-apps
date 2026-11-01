@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit
  */
 object Requests {
     private const val TAG = "Requests"
-    private const val REPO = "alejoacelas/2026-09-morning-reader"
+    private const val REPO = "alejoacelas/phone-apps"
     private val lock = Mutex()
 
     fun submit(context: Context, text: String) {
