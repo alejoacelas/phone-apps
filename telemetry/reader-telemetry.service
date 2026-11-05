@@ -1,0 +1,10 @@
+[Unit]
+Description=Phone apps telemetry receiver (tailnet only, /reader)
+
+[Service]
+ExecStart=/usr/bin/python3 %h/work/phone-apps/telemetry/server.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
