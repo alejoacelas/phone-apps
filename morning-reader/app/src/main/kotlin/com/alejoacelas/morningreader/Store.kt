@@ -216,6 +216,7 @@ object Store {
     }
 
     fun toggleArchive(key: String) = update { s ->
+        Telemetry.log("archive_toggle", "key" to key, "archiving" to (key !in s.pendingArchive))
         s.copy(pendingArchive = if (key in s.pendingArchive) s.pendingArchive - key else s.pendingArchive + key)
     }
 
@@ -244,7 +245,7 @@ object Store {
 
     fun recordShortfall(minutesLeft: Int) = update { s ->
         if (s.shortfalls.any { it.day == s.day && it.minutesLeft == minutesLeft }) s
-        else s.copy(shortfalls = (s.shortfalls + Shortfall(s.day, minutesLeft, System.currentTimeMillis())).takeLast(500))
+        else s.also { Telemetry.log("shortfall", "minutes_left" to minutesLeft) }.copy(shortfalls = (s.shortfalls + Shortfall(s.day, minutesLeft, System.currentTimeMillis())).takeLast(500))
     }
 
     fun book(id: String?): BookPack? = _books.value.firstOrNull { it.id == id }

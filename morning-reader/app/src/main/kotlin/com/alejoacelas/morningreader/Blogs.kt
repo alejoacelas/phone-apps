@@ -77,7 +77,7 @@ object Blogs {
                 async {
                     gate.withPermit {
                         val entries = runCatching { entries(original.url) }
-                            .onFailure { Log.w(TAG, "feed ${original.url}", it); failed.incrementAndGet() }.getOrDefault(emptyList())
+                            .onFailure { Log.w(TAG, "feed ${original.url}", it); Telemetry.log("feed_error", "url" to original.url, "error" to it.message); failed.incrementAndGet() }.getOrDefault(emptyList())
                         val feed = Store.state.value.feeds.firstOrNull { it.url == original.url } ?: original
                         entries.filter { it.published >= cutoff && it.url !in seen }.take(PER_FEED).forEach { entry ->
                             synchronized(seen) { seen += entry.url }
@@ -103,6 +103,7 @@ object Blogs {
             it.copy(seenPostUrls = seen.toList().takeLast(3000), lastBlogRefresh = System.currentTimeMillis(),
                 blogStatus = status)
         }
+        Telemetry.log("feeds_refreshed", "status" to status)
         status
     }
 

@@ -82,7 +82,8 @@ import kotlinx.coroutines.launch
 /** Reading pauses longer than this stop counting toward time used. */
 private const val IDLE_MS = 150_000L
 
-private data class Lookup(val text: String, val question: String? = null, val answer: String? = null, val error: String? = null)
+private data class Lookup(val text: String, val question: String? = null, val answer: String? = null,
+                          val error: String? = null, val partial: String? = null)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,13 +109,24 @@ fun ReaderScreen(itemId: String, modifier: Modifier) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
 
     LaunchedEffect(scroll.value) { lastInteraction = System.currentTimeMillis() }
+    // Log the visit and warm the model's cache with this block, so the first Explain is fast.
+    DisposableEffect(itemId) {
+        val opened = System.currentTimeMillis()
+        Telemetry.log("block_open", "item" to itemId, "book" to item.bookId, "source" to item.source,
+            "title" to item.title, "words" to item.words, "resumed_scroll" to startScroll)
+        onDispose {
+            Telemetry.log("block_close", "item" to itemId, "seconds" to (System.currentTimeMillis() - opened) / 1000,
+                "scroll" to scroll.value, "scroll_max" to scroll.maxValue, "finished" to finished)
+        }
+    }
+    LaunchedEffect(itemId) { Ai.prewarm(item) }
     // Leaving the app mid-block (say, to pick music in Spotify) keeps counting, up to a cap.
     DisposableEffect(itemId, lifecycle) {
         Store.returnedToBlock(itemId)
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_STOP -> if (!finished) Store.leftBlock(itemId)
-                Lifecycle.Event.ON_START -> Store.returnedToBlock(itemId)
+                Lifecycle.Event.ON_STOP -> { Telemetry.log("block_left_app", "item" to itemId); if (!finished) Store.leftBlock(itemId) }
+                Lifecycle.Event.ON_START -> { Telemetry.log("block_back_in_app", "item" to itemId); Store.returnedToBlock(itemId) }
                 else -> {}
             }
         }
@@ -142,10 +154,15 @@ fun ReaderScreen(itemId: String, modifier: Modifier) {
     /** Explain (no question) or answer a typed question about a selection. Asks show in Notes; Explains are only kept. */
     fun lookUp(sel: Selection, question: String?) {
         lookup = Lookup(sel.text, question = question)
+        val ctx = LookupContext(item, sel.text, sel.paragraph, sel.marked)
+        // Shows the answer as it streams in, unless the sheet was closed or replaced meanwhile.
+        val showPartial = { partial: String ->
+            if (lookup?.text == sel.text && lookup?.question == question && lookup?.error == null)
+                lookup = Lookup(sel.text, question = question, partial = partial)
+        }
         scope.launch {
             lookup = runCatching {
-                if (question == null) Ai.explain(sel.text, sel.context, item.source, item.language)
-                else Ai.answer(question, sel.text, sel.context, item.source, item.language)
+                if (question == null) Ai.explain(ctx, showPartial) else Ai.answer(question, ctx, showPartial)
             }.fold(
                 { answer ->
                     Store.update { s ->
@@ -172,6 +189,9 @@ fun ReaderScreen(itemId: String, modifier: Modifier) {
             )
         }
         finished = true
+        val s = Store.state.value
+        Telemetry.log("block_finish", "item" to itemId, "words" to item.words, "wpm" to s.wordsPerMinute,
+            "used_seconds_today" to s.usedSecondsToday, "budget_minutes" to s.budgetMinutes)
         scope.launch { delay(100); scroll.animateScrollTo(scroll.maxValue) }
     }
 
@@ -186,7 +206,7 @@ fun ReaderScreen(itemId: String, modifier: Modifier) {
             Text(item.source, style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant,
                 maxLines = 1, modifier = Modifier.weight(1f))
             // A dialog over the text, so the scroll position and the block's timer carry on underneath.
-            if (!Eink.on) IconButton(onClick = { requesting = true }) { Icon(Icons.Outlined.Feedback, "Request a feature") }
+            IconButton(onClick = { requesting = true }) { Icon(Icons.Outlined.Feedback, "Request a feature") }
             if (!Eink.on && item.playlistPrompts.isNotEmpty()) IconButton(onClick = { showMusic = true }) {
                 Icon(Icons.Outlined.MusicNote, "Music for this")
             }
@@ -232,6 +252,8 @@ fun ReaderScreen(itemId: String, modifier: Modifier) {
                 Spacer(Modifier.height(18.dp))
                 BlockText(item, colors.onBackground.toArgb(), colors.primary.toArgb()) { action, sel ->
                     lastInteraction = System.currentTimeMillis()
+                    Telemetry.log("selection_action", "action" to action.name, "item" to itemId, "selection" to sel.text,
+                        "paragraph" to sel.paragraph)
                     when (action) {
                         SelectionAction.Explain -> lookUp(sel, null)
                         SelectionAction.Ask -> asking = sel
@@ -250,7 +272,8 @@ fun ReaderScreen(itemId: String, modifier: Modifier) {
     }
 
     lookup?.let { current ->
-        ModalBottomSheet(onDismissRequest = { lookup = null }) {
+        ModalBottomSheet(onDismissRequest = { Telemetry.log("lookup_closed", "item" to itemId,
+            "had_answer" to (current.answer != null)); lookup = null }) {
             Column(Modifier.navigationBarsPadding().padding(horizontal = 24.dp).padding(bottom = 32.dp)) {
                 Text("“${current.text.take(300)}”", style = MaterialTheme.typography.titleMedium)
                 current.question?.let {
@@ -261,6 +284,7 @@ fun ReaderScreen(itemId: String, modifier: Modifier) {
                 when {
                     current.answer != null -> Text(current.answer, style = MaterialTheme.typography.bodyLarge)
                     current.error != null -> Text(current.error, color = colors.error)
+                    current.partial != null -> Text(current.partial, style = MaterialTheme.typography.bodyLarge)
                     else -> CircularProgressIndicator(Modifier.padding(8.dp))
                 }
             }
@@ -277,6 +301,7 @@ fun ReaderScreen(itemId: String, modifier: Modifier) {
         TextPrompt(title = "Note on “${sel.text.take(60)}”", label = "Note", singleLine = false,
             confirm = "Save", onDismiss = { noting = null }) { text ->
             noting = null
+            Telemetry.log("note_saved", "item" to item.id, "selection" to sel.text, "note" to text)
             Store.saveNote(Note(System.currentTimeMillis(), item.id, item.bookId, item.source, item.title,
                 sel.paragraph, sel.start, sel.end, sel.text, text))
             Toast.makeText(context, "Note saved", Toast.LENGTH_SHORT).show()
@@ -285,7 +310,7 @@ fun ReaderScreen(itemId: String, modifier: Modifier) {
     if (requesting) {
         androidx.compose.ui.window.Dialog(onDismissRequest = { requesting = false }) {
             Surface(shape = RoundedCornerShape(20.dp), color = colors.surfaceContainerHigh) {
-                Column(Modifier.padding(20.dp)) { FeatureRequestBox(onSent = { requesting = false }) }
+                Column(Modifier.padding(20.dp)) { FeatureRequestBox(onSent = { requesting = false }, reading = item) }
             }
         }
     }
@@ -420,7 +445,11 @@ fun BookChoiceRow(bookId: String, state: AppState) {
         BookChoice.entries.forEach { choice ->
             FilterChip(
                 selected = current == choice,
-                onClick = { Store.setChoice(bookId, if (current == choice) null else choice) },
+                onClick = {
+                    val next = if (current == choice) null else choice
+                    Telemetry.log("book_choice", "book" to bookId, "choice" to next?.key)
+                    Store.setChoice(bookId, next)
+                },
                 label = { Text(choice.label, style = MaterialTheme.typography.labelMedium) },
             )
         }
@@ -430,8 +459,6 @@ fun BookChoiceRow(bookId: String, state: AppState) {
     }
 }
 
-/** A selection in a block, with the text around it to give the model context. */
-data class Selection(val text: String, val start: Int, val end: Int, val paragraph: Int, val context: String)
 
 /** The passage as a native TextView, so selecting text can offer Explain and the other actions. */
 @Composable
@@ -480,7 +507,8 @@ private fun BlockText(item: ReadItem, textColor: Int, accent: Int, onAction: (Se
         update = { tv ->
             tv.setTextColor(textColor)
             tv.highlightColor = (accent and 0x00FFFFFF) or 0x44000000
-            if (tv.text !== built.text) tv.text = built.text
+            // TextView copies the text it's given, so compare against the block it was last given instead.
+            if (tv.tag !== built) { tv.text = built.text; tv.tag = built }
         },
     )
 }
@@ -489,40 +517,22 @@ enum class SelectionAction(val label: String, val menuId: Int) {
     Explain("Explain", 0x5e1), Ask("Ask", 0x5e2), Note("Note", 0x5e3)
 }
 
-private class BuiltText(val text: CharSequence, val ranges: List<Pair<IntRange, String>>) {
-    /** The selected text plus the paragraph it starts in and its neighbours. */
-    fun selection(rawStart: Int, rawEnd: Int): Selection? {
-        val start = minOf(rawStart, rawEnd).coerceIn(0, text.length)
-        val end = maxOf(rawStart, rawEnd).coerceIn(start, text.length)
-        val selected = text.substring(start, end).trim()
-        if (selected.isEmpty()) return null
-        val index = ranges.indexOfFirst { start in it.first }.takeIf { it >= 0 }
-            ?: ranges.indexOfLast { it.first.first <= start }.coerceAtLeast(0)
-        val around = (index - 1..index + 1).mapNotNull { ranges.getOrNull(it)?.second?.take(1500) }
-        return Selection(selected, start, end, index, around.joinToString("\n\n"))
-    }
+private class BuiltText(val text: CharSequence, val layout: BlockLayout) {
+    fun selection(rawStart: Int, rawEnd: Int): Selection? = layout.selection(rawStart, rawEnd)
 }
 
 private fun buildText(font: Typeface, paragraphs: List<String>): BuiltText {
-    val out = SpannableStringBuilder()
-    val ranges = mutableListOf<Pair<IntRange, String>>()
+    val layout = BlockLayout(paragraphs)
+    val out = SpannableStringBuilder(layout.text)
     val bold = Typeface.create(font, 600, false)
-    paragraphs.forEachIndexed { i, raw ->
-        if (i > 0) {
-            out.append("\n")
-            val gap = out.length
-            out.append("\n")
-            out.setSpan(RelativeSizeSpan(0.55f), gap, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    layout.ranges.forEachIndexed { i, (range, _) ->
+        // The blank line before each paragraph is shorter than a full line.
+        if (i > 0) out.setSpan(RelativeSizeSpan(0.55f), range.first - 1, range.first, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        if (layout.headings[i]) {
+            val end = range.last
+            out.setSpan(TypefaceSpan(bold), range.first, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            out.setSpan(RelativeSizeSpan(1.15f), range.first, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
-        val heading = raw.startsWith("## ")
-        val text = if (heading) raw.removePrefix("## ") else raw
-        val start = out.length
-        out.append(text)
-        if (heading) {
-            out.setSpan(TypefaceSpan(bold), start, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            out.setSpan(RelativeSizeSpan(1.15f), start, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
-        ranges += (start..out.length) to text
     }
-    return BuiltText(out, ranges)
+    return BuiltText(out, layout)
 }

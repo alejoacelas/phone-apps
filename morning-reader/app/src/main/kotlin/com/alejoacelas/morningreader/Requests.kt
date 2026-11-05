@@ -33,8 +33,11 @@ object Requests {
     private const val REPO = "alejoacelas/phone-apps"
     private val lock = Mutex()
 
-    fun submit(context: Context, text: String) {
-        Store.update { it.copy(pendingRequests = it.pendingRequests + FeatureRequest(text.trim(), System.currentTimeMillis())) }
+    /** [reading] names the block open when the request was made from the reader. */
+    fun submit(context: Context, text: String, reading: String? = null) {
+        val request = FeatureRequest(text.trim(), System.currentTimeMillis(), if (Eink.on) "Boox" else "phone", reading)
+        Telemetry.log("feature_request", "text" to request.text, "reading" to reading)
+        Store.update { it.copy(pendingRequests = it.pendingRequests + request) }
         Store.saveNow()
         retryLater(context)
     }
@@ -52,7 +55,9 @@ object Requests {
     /** Files every waiting request in order. Returns false if any is still waiting. */
     suspend fun fileWaiting(): Boolean = lock.withLock {
         for (request in Store.state.value.pendingRequests) {
-            val number = runCatching { file(request) }.onFailure { Log.w(TAG, "filing failed", it) }.getOrNull()
+            val number = runCatching { file(request) }.onFailure {
+                Log.w(TAG, "filing failed", it); Telemetry.log("feature_request_failed", "error" to it.message)
+            }.getOrNull()
                 ?: return false
             Store.update { s -> s.copy(pendingRequests = s.pendingRequests - request, lastFiledIssue = number) }
             Store.saveNow()
@@ -67,7 +72,8 @@ object Requests {
         val day = java.time.Instant.ofEpochMilli(request.at).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
         val body = buildJsonObject {
             put("title", title)
-            put("body", "${request.text}\n\n_Requested from the app on the phone, $day._")
+            val where = request.reading?.let { " while reading $it" } ?: ""
+            put("body", "${request.text}\n\n_Requested from the app on the ${request.device}$where, $day._")
         }
         val http = Request.Builder()
             .url("https://api.github.com/repos/$REPO/issues")

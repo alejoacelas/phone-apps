@@ -23,6 +23,9 @@ android {
         versionName = "0.1"
         buildConfigField("String", "ANTHROPIC_API_KEY", "\"${env.getProperty("ANTHROPIC_API_KEY", "")}\"")
         buildConfigField("String", "GITHUB_ISSUES_TOKEN", "\"${env.getProperty("GITHUB_ISSUES_TOKEN", "")}\"")
+        // Telemetry goes to the agent server, reachable only inside the tailnet (see README).
+        buildConfigField("String", "TELEMETRY_URL", "\"https://agent-server.tail622085.ts.net/reader/events\"")
+        buildConfigField("String", "BUILD_TIME", "\"${System.currentTimeMillis()}\"")
     }
 
     buildTypes {
@@ -59,4 +62,5 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:5.5.0")
     implementation("org.jsoup:jsoup:1.23.2")
     implementation("net.dankito.readability4j:readability4j:1.0.8")
+    testImplementation("junit:junit:4.13.2")
 }

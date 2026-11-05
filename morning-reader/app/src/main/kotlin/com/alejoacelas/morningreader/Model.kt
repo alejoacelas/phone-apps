@@ -168,7 +168,7 @@ data class AppState(
 
 /** A feature request typed in Settings, kept until it's filed as a GitHub issue. */
 @Serializable
-data class FeatureRequest(val text: String, val at: Long)
+data class FeatureRequest(val text: String, val at: Long, val device: String = "phone", val reading: String? = null)
 
 /** What happens next with a book, chosen at the end of a block. Today's session ranks books by it. */
 enum class BookChoice(val key: String, val label: String, val effect: String) {

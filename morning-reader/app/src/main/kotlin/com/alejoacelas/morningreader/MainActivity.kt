@@ -46,13 +46,15 @@ sealed interface Screen {
 /** Navigation plus the two actions every screen needs: start a reading block, watch a video. */
 class Nav(private val stack: MutableList<Screen>, val say: (String) -> Unit, private val context: android.content.Context) {
     val current get() = stack.last()
-    fun go(screen: Screen) { stack += screen }
-    fun top(screen: Screen) { stack.clear(); stack += screen }
-    fun back() { if (stack.size > 1) stack.removeAt(stack.lastIndex) }
+    fun go(screen: Screen) { stack += screen; logScreen() }
+    fun top(screen: Screen) { stack.clear(); stack += screen; logScreen() }
+    fun back() { if (stack.size > 1) stack.removeAt(stack.lastIndex); logScreen() }
+    private fun logScreen() = Telemetry.log("screen", "screen" to current.toString(), "depth" to stack.size)
 
     /** Opens a block if it fits in today's budget (or is the one in progress). */
     fun read(item: ReadItem, minutes: Int = Store.minutesFor(item.words), replace: Boolean = false) {
         if (!Store.canStart(item.id, minutes)) {
+            Telemetry.log("over_budget", "item" to item.id, "minutes" to minutes, "left" to Store.minutesLeft())
             say(overBudget(minutes)); return
         }
         Store.update { s ->
@@ -68,6 +70,7 @@ class Nav(private val stack: MutableList<Screen>, val say: (String) -> Unit, pri
             say(overBudget(minutes)); return
         }
         // Charge the budget only once the video actually opened.
+        Telemetry.log("watch_video", "video" to video.youtubeId, "title" to video.title)
         if (openVideo(context, video.youtubeId)) {
             Store.update { it.copy(usedSecondsToday = it.usedSecondsToday + video.seconds, watched = it.watched + video.youtubeId) }
         }
@@ -78,6 +81,7 @@ class Nav(private val stack: MutableList<Screen>, val say: (String) -> Unit, pri
      * radio, essays and books open outside the session and don't count toward the budget.
      */
     fun open(item: Secondary) {
+        Telemetry.log("open_secondary", "url" to item.url, "title" to item.title, "kind" to item.kind)
         item.asBlockVideo?.let { watch(it); return }
         if (openSecondary(context, item)) Store.update { it.copy(opened = it.opened + item.url) }
     }
@@ -104,11 +108,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        Telemetry.log("app_background")
         Store.writeExports()
     }
 
     override fun onResume() {
         super.onResume()
+        Telemetry.log("app_foreground", "used_seconds_today" to Store.state.value.usedSecondsToday)
         Store.reloadIfChanged()
         Requests.retryLater(this)
         // Mornings shouldn't depend on the background schedule: refresh stale or failed feeds on open.

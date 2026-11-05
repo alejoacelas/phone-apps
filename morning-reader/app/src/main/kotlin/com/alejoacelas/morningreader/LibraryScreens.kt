@@ -253,7 +253,7 @@ fun SettingsScreen(modifier: Modifier) {
                 TextButton(onClick = { Store.update { s -> s.copy(feeds = s.feeds.filterNot { it.url == feed.url }) } }) { Text("Remove") }
             }
         }
-        if (!Eink.on) item {
+        item {
             Spacer(Modifier.height(16.dp))
             FeatureRequestBox()
         }
@@ -262,7 +262,7 @@ fun SettingsScreen(modifier: Modifier) {
 
 /** A feature request, filed as a GitHub issue. Used at the bottom of Settings and from the reader. */
 @Composable
-fun FeatureRequestBox(onSent: () -> Unit = {}) {
+fun FeatureRequestBox(onSent: () -> Unit = {}, reading: ReadItem? = null) {
     val nav = LocalNav.current
     val context = androidx.compose.ui.platform.LocalContext.current
     val state by Store.state.collectAsState()
@@ -277,7 +277,7 @@ fun FeatureRequestBox(onSent: () -> Unit = {}) {
                 when {
                     waiting > 0 && BuildConfig.GITHUB_ISSUES_TOKEN.isBlank() ->
                         "$waiting saved on the phone. This build has no GitHub token; they'll be filed after an install that has one."
-                    waiting > 0 -> "$waiting waiting to be filed on GitHub. They'll go once the phone is online."
+                    waiting > 0 -> "$waiting waiting to be filed on GitHub. They'll go once the ${if (Eink.on) "Boox" else "phone"} is online."
                     state.lastFiledIssue > 0 -> "Last request filed as issue #${state.lastFiledIssue}."
                     else -> "Filed as an issue on the app's GitHub repository."
                 },
@@ -285,7 +285,7 @@ fun FeatureRequestBox(onSent: () -> Unit = {}) {
                 modifier = Modifier.weight(1f),
             )
             TextButton(enabled = request.isNotBlank(), onClick = {
-                Requests.submit(context, request)
+                Requests.submit(context, request, reading?.let { "${it.source} · ${it.title}" })
                 request = ""
                 nav.say("Request saved. Filing it on GitHub…")
                 onSent()
