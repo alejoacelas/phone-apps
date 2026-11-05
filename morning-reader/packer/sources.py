@@ -114,6 +114,8 @@ def download(book: Book) -> tuple[Path, str]:
 SKIP_FILES = re.compile(r"(titlepage|imprint|colophon|uncopyright|halftitle|toc|loi|endnotes|"
                         r"frontispiece|wrap0000|cover|copyright|nav)\.x?html", re.I)
 INVISIBLE = re.compile("[﻿⁠​­]")
+HEADER_TITLE = {"title", "subtitle", "label", "ordinal", "z3998:subtitle", "z3998:ordinal"}
+BLOCK_TAGS = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "blockquote"]
 LINE_BREAK = "\ue000"  # private-use sentinel; not whitespace, so it survives collapsing
 
 
@@ -162,14 +164,26 @@ def extract(path: Path) -> dict:
                     joined = soup.new_tag("p")
                     joined.string = LINE_BREAK.join(lines)
                     stanza.replace_with(joined)
-            header = body.find("header")
+            # The chapter's own header, not a letter's dateline header inside a blockquote.
+            header = next((h for h in body.find_all("header") if not h.find_parent("blockquote")), None)
             if header is not None:
                 head_title = soup.title.get_text(strip=True) if soup.title else ""
                 if head_title:
                     paragraphs.append("## " + INVISIBLE.sub("", head_title))
-                header.decompose()
-            for el in body.find_all(["h1", "h2", "h3", "h4", "p", "blockquote"]):
-                if el.find_parent(["p", "blockquote"]) or (el.name == "blockquote" and el.find("p")):
+                # The heading stands in for the header's title parts; keep the rest, such as
+                # an epigraph or a bridgehead summarising the chapter.
+                for part in header.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "hgroup"]):
+                    part.decompose()
+                for part in header.find_all(attrs={"epub:type": lambda t: bool(t and HEADER_TITLE & set(t.split()))}):
+                    part.decompose()
+                header.unwrap()
+            for cite in body.select("blockquote > cite"):  # an epigraph's or quotation's source
+                cite.name = "p"
+                cite.insert(0, "— ")
+            for el in body.find_all(BLOCK_TAGS):
+                # A blockquote is one paragraph only when it holds bare text; otherwise its own
+                # paragraphs (a letter, a verse quotation) are emitted one by one.
+                if el.find_parent("p") or (el.name == "blockquote" and el.find(BLOCK_TAGS)):
                     continue
                 text = _text(el)
                 if not text:
