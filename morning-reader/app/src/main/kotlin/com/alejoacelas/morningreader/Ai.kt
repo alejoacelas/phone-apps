@@ -178,9 +178,9 @@ object Ai {
 
     private fun language(ctx: LookupContext) = ctx.item.language ?: "the language of the passage"
 
-    /** Warms the cache for this block on both models, so the first lookup is as fast as later ones. */
+    /** Warms the cache for this block, so the first lookup is as fast as later ones. */
     suspend fun prewarm(item: ReadItem) = withContext(Dispatchers.IO) {
-        for (model in listOf(FAST_MODEL, MODEL)) {
+        for (model in listOf(MODEL)) {
             val started = System.currentTimeMillis()
             val result = runCatching {
                 http.newCall(request(body(model, system(item), "(warming the cache)", 0, "low"))).execute().use {
@@ -204,10 +204,7 @@ object Ai {
             - Don't summarise the story or interpret themes, and don't comment on the excerpt or the selection itself.
             Keep it under 80 words. Answer in ${language(ctx)}. Plain text, no preamble, no markdown.
         """.trimIndent()
-        // Haiku answers words and short phrases well in under a second; on whole sentences it often
-        // misreads who or what is meant, and Opus (first words in about 2 s) gets them right.
-        val model = if (ctx.selection.trim().split(Regex("\\s+")).size <= 3) FAST_MODEL else MODEL
-        return stream("explain", model, system(ctx.item), user, 4000, "low",
+        return stream("explain", MODEL, system(ctx.item), user, 4000, "low",
             arrayOf("item" to ctx.item.id, "selection" to ctx.selection), onText)
     }
 
