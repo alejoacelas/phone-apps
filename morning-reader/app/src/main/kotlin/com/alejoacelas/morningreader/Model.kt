@@ -164,7 +164,32 @@ data class AppState(
     /** Feature requests not yet accepted by GitHub, oldest first. */
     val pendingRequests: List<FeatureRequest> = emptyList(),
     val lastFiledIssue: Int = 0,
+    /** Books requested from any device, newest first, as last seen on the agent server. */
+    val bookRequests: List<BookRequest> = emptyList(),
 )
+
+/**
+ * A book asked for in the Library, built into a pack by the agent server. Fields after `device`
+ * come from the server; `sent` is false until the server has accepted the request.
+ */
+@Serializable
+data class BookRequest(
+    val id: String,
+    val query: String,
+    val device: String = "phone",
+    /** queued, building, done, not_found or failed. */
+    val status: String = "queued",
+    val title: String? = null,
+    val author: String? = null,
+    val source: String? = null,
+    @SerialName("pack_id") val packId: String? = null,
+    val message: String? = null,
+    val created: Long = 0,
+    val updated: Long = 0,
+    val sent: Boolean = false,
+) {
+    val active get() = !sent || status == "queued" || status == "building"
+}
 
 /** A feature request typed in Settings, kept until it's filed as a GitHub issue. */
 @Serializable

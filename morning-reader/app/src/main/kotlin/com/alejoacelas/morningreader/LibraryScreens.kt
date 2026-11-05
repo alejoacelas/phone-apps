@@ -32,6 +32,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
@@ -58,7 +60,8 @@ fun LibraryScreen(modifier: Modifier) {
     val state by Store.state.collectAsState()
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp, 24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         item { ScreenTitle("Library") }
-        if (books.isEmpty()) item { Text("No books yet. On the Mac, run ./pack starter.") }
+        item { BookRequestBox(state.bookRequests.take(5), books) }
+        if (books.isEmpty()) item { Text("No books yet. Request one above, or on the Mac run ./pack starter.") }
         items(books, key = { it.id }) { book ->
             val read = book.blocks.count { it.id in state.finished }
             Column(Modifier.fillMaxWidth().clickable { nav.go(Screen.Book(book.id)) }) {
@@ -76,6 +79,60 @@ fun LibraryScreen(modifier: Modifier) {
                 }
             }
         }
+    }
+}
+
+/** Asks the agent server for a book, and lists the latest requests with how each is going. */
+@Composable
+private fun BookRequestBox(recent: List<BookRequest>, books: List<BookPack>) {
+    val nav = LocalNav.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var query by remember { mutableStateOf("") }
+    val active = recent.any { it.active }
+    // While a book is being prepared, check every 30 seconds as long as the Library is open.
+    LaunchedEffect(active) {
+        while (active) {
+            Books.sync()
+            delay(30_000)
+        }
+    }
+    Column {
+        Text("REQUEST A BOOK", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(query, { query = it }, placeholder = { Text("A title, an author, or a description") },
+                modifier = Modifier.weight(1f))
+            Spacer(Modifier.width(8.dp))
+            TextButton(enabled = query.isNotBlank(), onClick = {
+                Books.submit(context, query)
+                query = ""
+                nav.say("Requested. It shows up here and on Today when it's ready.")
+            }) { Text("Send") }
+        }
+        if (recent.isEmpty()) Text("The agent server finds it and prepares it; every device gets it automatically.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        recent.forEach { r ->
+            val book = books.firstOrNull { it.id == r.packId }
+            Column(Modifier.fillMaxWidth().padding(top = 10.dp)
+                .then(if (book != null) Modifier.clickable { nav.go(Screen.Book(book.id)) } else Modifier)) {
+                Text(r.query, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
+                Text(requestStatus(r, book != null), style = MaterialTheme.typography.bodySmall,
+                    color = if (r.status == "done") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+private fun requestStatus(r: BookRequest, downloaded: Boolean): String {
+    val found = listOfNotNull(r.title, r.author).joinToString(" by ")
+    return when {
+        !r.sent -> "Waiting to send. It goes once the ${if (Eink.on) "Boox" else "phone"} is online and on Tailscale."
+        r.status == "queued" -> "Queued"
+        r.status == "building" -> "Being prepared" + (if (found.isNotEmpty()) ": $found" else "") + "…"
+        r.status == "done" && downloaded -> "Added" + (if (found.isNotEmpty()) ": $found" else "")
+        r.status == "done" -> "Ready" + (if (found.isNotEmpty()) ": $found" else "") + ". Downloading…"
+        r.status == "not_found" -> "Not found" + (r.message?.let { ". $it" } ?: "")
+        r.status == "failed" -> "Failed" + (r.message?.let { ". $it" } ?: "")
+        else -> r.status
     }
 }
 

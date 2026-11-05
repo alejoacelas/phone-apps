@@ -25,6 +25,8 @@ android {
         buildConfigField("String", "GITHUB_ISSUES_TOKEN", "\"${env.getProperty("GITHUB_ISSUES_TOKEN", "")}\"")
         // Telemetry goes to the agent server, reachable only inside the tailnet (see README).
         buildConfigField("String", "TELEMETRY_URL", "\"https://agent-server.tail622085.ts.net/reader/events\"")
+        // Book requests and server-built packs, same server and tailnet.
+        buildConfigField("String", "BOOKS_URL", "\"https://agent-server.tail622085.ts.net/books\"")
         buildConfigField("String", "BUILD_TIME", "\"${System.currentTimeMillis()}\"")
     }
 

@@ -8,6 +8,7 @@ class App : Application() {
         Telemetry.init(this)
         Store.init(this)
         Blogs.schedule(this)
+        Books.schedule(this)
         Eink.offerAsHome(this)
     }
 }
