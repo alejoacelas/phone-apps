@@ -36,6 +36,9 @@ they are served as short, self-contained passages under a daily time budget.
   which opens the same box over the text without leaving the block. Each is filed as a GitHub issue on this
   repository when sent; if that fails it stays on the phone and a background job
   retries once there's network.
+- The Library's **Request a book** box sends a title, author or description to the agent
+  server, which builds the pack. Every device checks for new packs on opening and every two
+  hours, downloads them and lists each request's status under the box.
 - Each block and book has Spotify AI Playlist prompts. The app copies one and opens
   Spotify, since Spotify has no API for AI Playlists.
 
