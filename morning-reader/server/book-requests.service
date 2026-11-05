@@ -1,0 +1,13 @@
+[Unit]
+Description=Morning reader book requests (tailnet only, /books)
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/work/phone-apps/morning-reader
+ExecStart=%h/.local/bin/uv run --quiet --project %h/work/phone-apps/morning-reader python -m packer serve
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

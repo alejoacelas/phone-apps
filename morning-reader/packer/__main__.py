@@ -15,6 +15,7 @@
   ./pack wishlist folder NAME         use this bookmarks folder for the wish list
   ./pack opml FILE                    push a feed list (OPML) for the app to import
   ./pack pull                         copy notes, Ask answers and shortfalls from the phone
+  ./pack serve                        take book requests from the app and build them (agent server)
 
 Add --boox to any command that pushes or pulls to use the Boox instead of the phone.
 """
@@ -225,11 +226,15 @@ def main() -> None:
     sub.add_parser("opml", help="push an OPML feed list", parents=[device]).add_argument("file", type=Path)
     sub.add_parser("pull", help="copy notes, Ask answers and shortfalls from the phone into cache/phone/",
                    parents=[device])
+    sub.add_parser("serve", help="take book requests from the app and build them (runs on the agent server)")
     args = parser.parse_args()
     if getattr(args, "boox", False) or args.command == "send":
         os.environ["PHONE_SERIAL"] = BOOX_SERIAL  # read by adb-phone
 
-    if args.command == "search":
+    if args.command == "serve":
+        from . import serve
+        serve.serve()
+    elif args.command == "search":
         for b in sources.search(" ".join(args.query), limit=10):
             print(f"{b.gutenberg_id:>6}  {b.title}  —  {b.author}")
     elif args.command == "add":
