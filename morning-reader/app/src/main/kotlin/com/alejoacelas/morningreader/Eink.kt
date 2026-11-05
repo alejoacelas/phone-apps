@@ -8,8 +8,8 @@ import android.os.Build
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
- * On an Onyx Boox the same APK runs simplified for e-ink: black on white, no videos, music,
- * secondary material or feature requests, and it can be the home screen.
+ * On an Onyx Boox the same APK runs simplified for e-ink: black on white, no videos, music
+ * or secondary material, and it can be the home screen.
  */
 object Eink {
     val on = Build.MANUFACTURER.equals("ONYX", ignoreCase = true)

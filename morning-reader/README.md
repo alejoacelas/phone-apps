@@ -21,8 +21,8 @@ export ANDROID_HOME=~/Library/Android/sdk
 ## Boox e-reader
 
 The same APK runs on the Onyx Boox Go7, where it is the home screen. On an Onyx
-device the app turns black on white and leaves out videos, Spotify prompts,
-secondary material and feature requests. The grid icon on Today opens Boox's own
+device the app turns black on white and leaves out videos, Spotify prompts
+and secondary material. The grid icon on Today opens Boox's own
 launcher, for its library, other apps and settings.
 
 `./pack` commands reach the Boox with `--boox`, for example `./pack push --boox`;
@@ -93,8 +93,9 @@ files each time you ask, so a book bookmarked this morning shows up the next run
 build` to pick the next books from what you've bookmarked. Only public-domain books
 are on Gutenberg, so most modern titles are listed as "not on Gutenberg". Wish-list matching uses Haiku 5.5; results are cached in `cache/wishlist.json`.
 
-Book preparation and Ask use Opus 5.5 directly through Anthropic. Quick explanations,
-feed hooks and lightweight matching use Haiku 5.5. The packer reports estimated
+Book preparation, Ask and Explain on whole sentences use Opus 5.5 directly through
+Anthropic. Explain on a word or short phrase, feed hooks and lightweight matching use
+Haiku 5.5. The packer reports estimated
 list-price cost before the linked monthly API credits.
 
 ## Secondary material
@@ -112,6 +113,7 @@ sources still work and `./pack sources <id>` adds videos the next day.
 ## Notes
 
 Select text while reading to Explain it, Ask a question about it, or add a Note.
+Explain and Ask see the whole block and the one before it, with your selection marked.
 The Notes tab lists your notes and your questions with their answers, each with the
 book, block and text you selected. Explain answers aren't listed. `./pack pull`
 copies the notes, the questions and answers, and the log of times nothing fit the
@@ -126,9 +128,21 @@ Settings also adds and removes single feeds.
 
 ## Feature requests
 
-Type a request at the bottom of Settings, or tap the request icon next to the music
-note while reading, and tap Send. It becomes an issue on this
-repository. Requests made offline wait on the phone and go out once it's online.
+Type a request at the bottom of Settings, or tap the request icon at the top of the
+reader, and tap Send, on the phone or the Boox. It becomes an issue on this
+repository. Requests made offline wait on the device and go out once it's online.
+
+## Telemetry
+
+The app logs every screen, block, selection, model call (with its full prompt and
+reply), request, error and crash. Events wait on the device and upload to
+`https://agent-server.tail622085.ts.net/reader/events`, reachable only inside the
+tailnet, so the device needs Tailscale on. The receiver is `../telemetry/server.py`,
+run by `reader-telemetry.service` on the agent server; it writes one file per day:
+
+```bash
+ssh agent-server 'tail ~/.local/share/reader-telemetry/$(date -u +%F).jsonl'
+```
 
 ## Secrets
 
