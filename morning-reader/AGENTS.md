@@ -52,6 +52,11 @@ they are served as short, self-contained passages under a daily time budget.
 - `packer/wishlist.py` reads a Chrome bookmarks folder as a wish list
   (`./pack wishlist`). The folder name is a setting in `cache/settings.json`; the
   bookmarks are personal, so everything derived from them stays in `cache/`.
+- `packer/serve.py` (`./pack serve`) runs on the agent server as `book-requests.service`
+  (`server/`, checkout `~/work/phone-apps`), published at `/books` on the tailnet. It
+  queues the app's book requests and builds each from Gutenberg or Standard Ebooks, else
+  from a LibGen EPUB (`packer/libgen.py`), into the server's `packs/`. After changing it,
+  pull on the server and restart the service.
 - `docs/book-pack.md` — the book pack format both sides share.
 - `cache/` and `packs/` are ignored. `cache/` holds downloads and the user's
   private feed and reading lists; never commit it.
@@ -86,6 +91,11 @@ text, so they stay in the ignored `packs/`.
 Load the Anthropic key with `~/best/stash/dotfiles/bin/op-agent` from `mac-agents`.
 Use its item ID with `op-agent read` or `op-agent inject` to rebuild the ignored `.env`.
 The YouTube and GitHub credentials remain in the locations above.
+
+The agent server's `.env` (in `~/work/phone-apps/morning-reader`) holds `ANTHROPIC_API_KEY`
+and `YOUTUBE_API_KEY` from the `server-agents` vault, field `credential`, items
+`3la5ndmxz37k757hrfspqlot5m` and `omlliirbzpru77z6evbmaswgke`; rebuild it there with
+`~/.local/bin/op-agent inject`.
 
 The Anthropic key and GitHub token are compiled into the private APK; never publish
 an APK. Direct Anthropic calls use the monthly API credits linked to Alejandro's
