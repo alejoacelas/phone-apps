@@ -69,8 +69,8 @@ the two book screens link to each other. Write the essays as JSON (title, author
 language, paragraphs with `## ` headings) and build it against the book's pack id:
 
 ```bash
-./pack criticism gutenberg-1342 austen.json          # to the phone
-./pack criticism gutenberg-1342 austen.json --boox   # or the Boox
+./pack criticism gutenberg-1342 austen.json   # build and push to the phone
+./pack push --boox                            # then copy every pack to the Boox
 ```
 
 ## Your own books and files
