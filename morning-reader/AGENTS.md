@@ -7,7 +7,7 @@ they are served as short, self-contained passages under a daily time budget.
 ## Working on it
 
 Set up Android as in [`../AGENTS.md`](../AGENTS.md), run `./gradlew assembleDebug`,
-then `~/best/stash/dotfiles/bin/adb-phone install -r app/build/outputs/apk/debug/app-debug.apk`.
+then `~/best/areas/dotfiles/bin/adb-phone install -r app/build/outputs/apk/debug/app-debug.apk`.
 The app also runs on Alejo's Boox Go7 as its home screen, so changes to shared screens
 show up there too; install there with the Boox's serial and follow the README's Boox
 section.
@@ -37,7 +37,7 @@ books hold their full text.
 | `YOUTUBE_API_KEY` | `YOUTUBE_API_KEY — 2026-09-morning-reader` (`xwm7xqceh6je7wnnghhfqmpfue`; Google Cloud project `morning-reader-27191`, `alejoacelas@gmail.com`) |
 | `GITHUB_ISSUES_TOKEN` | `GITHUB_ISSUES_TOKEN — 2026-09-morning-reader` (`n2bc52jki6ebzrstlw2hg25ure`; fine-grained token for this repository only, Issues read and write, expires 2027-10-09) |
 
-Load the Anthropic key with `~/best/stash/dotfiles/bin/op-agent` from `mac-agents`.
+Load the Anthropic key with `~/best/areas/dotfiles/bin/op-agent` from `mac-agents`.
 Use its item ID with `op-agent read` or `op-agent inject` to rebuild the ignored `.env`.
 The YouTube and GitHub credentials remain in the locations above.
 

@@ -7,7 +7,7 @@ the `AGENTS.md` inside each app.
 
 ## Android
 
-Connect with `~/best/stash/dotfiles/bin/adb-phone`. It prints the serial to pass to
+Connect with `~/best/areas/dotfiles/bin/adb-phone`. It prints the serial to pass to
 `adb -s`, or runs `adb` with any arguments you give it. If it can't find the phone,
 ask Alejo to turn on Wireless debugging. The phone stays awake while charging, so
 plug it in for tests that run in the background. Set `PHONE_SERIAL=ec27fd9` to
