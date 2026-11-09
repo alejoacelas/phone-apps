@@ -142,6 +142,9 @@ fun BookScreen(bookId: String, modifier: Modifier) {
     val nav = LocalNav.current
     val book = Store.book(bookId) ?: run { Text("Book not found", Modifier.padding(24.dp)); return }
     val state by Store.state.collectAsState()
+    val books by Store.books.collectAsState()
+    val about = books.firstOrNull { it.id == book.companionTo }
+    val criticism = books.filter { it.companionTo == book.id }
     var showMusic by remember { mutableStateOf(false) }
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 32.dp)) {
         item {
@@ -161,6 +164,8 @@ fun BookScreen(bookId: String, modifier: Modifier) {
                 Text(book.summary, style = MaterialTheme.typography.bodyLarge)
                 Spacer(Modifier.height(10.dp))
                 BookChoiceRow(book.id, state)
+                if (about != null) BookLink("CRITICISM OF", about)
+                criticism.forEach { BookLink("CLASSIC CRITICISM", it) }
                 if (!Eink.on && book.secondary.isNotEmpty()) {
                     Spacer(Modifier.height(14.dp))
                     Text("GO DEEPER", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
@@ -206,6 +211,16 @@ fun BookScreen(bookId: String, modifier: Modifier) {
     }
     if (showMusic) ModalBottomSheet(onDismissRequest = { showMusic = false }) {
         MusicPrompts(book.playlistPrompts.map { (k, v) -> "The book · $k" to v })
+    }
+}
+
+/** A link from a book to its criticism pack, or back. */
+@Composable
+private fun BookLink(label: String, to: BookPack) {
+    val nav = LocalNav.current
+    Column(Modifier.fillMaxWidth().clickable { nav.go(Screen.Book(to.id)) }.padding(top = 14.dp)) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+        Text(to.title + " →", style = MaterialTheme.typography.titleMedium)
     }
 }
 

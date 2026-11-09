@@ -21,6 +21,8 @@ data class BookPack(
     /** Secondary material from trusted sources, best first. Replaces `videos` in packs that have it. */
     val secondary: List<Secondary> = emptyList(),
     val blocks: List<Block> = emptyList(),
+    /** For a criticism pack, the id of the book it is about. */
+    @SerialName("companion_to") val companionTo: String? = null,
 )
 
 /** A video, radio episode, essay or book about a book or its author, from a trusted source. */

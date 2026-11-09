@@ -62,6 +62,17 @@ loads new packs when it opens or when you tap refresh.
 ./pack push                          # re-push every built pack
 ```
 
+## Criticism
+
+A criticism pack collects classic essays about one book as a book of its own, and
+the two book screens link to each other. Write the essays as JSON (title, author,
+language, paragraphs with `## ` headings) and build it against the book's pack id:
+
+```bash
+./pack criticism gutenberg-1342 austen.json          # to the phone
+./pack criticism gutenberg-1342 austen.json --boox   # or the Boox
+```
+
 ## Your own books and files
 
 `./pack file` builds packs from EPUBs and text PDFs you already have, such as books

@@ -4,6 +4,7 @@
   ./pack add 944                      same, by Gutenberg id
   ./pack file BOOK.epub [BOOK.pdf ...] build packs from your own EPUBs or text PDFs and push them
   ./pack send FILE [FILE ...]         copy any file into the Boox library for its own reader
+  ./pack criticism gutenberg-1342 F.json  build a criticism pack linked to a built book and push it
   ./pack search "wealth of nations"   list matches without building
   ./pack starter                      build and push the starter shelf
   ./pack push                         push every built pack to the phone
@@ -82,7 +83,15 @@ def build_file(path: Path) -> Path:
     return make_pack(text, f"file-{slug}", kind[1:].upper(), "")
 
 
-def make_pack(text: dict, book_id: str, edition: str, source_url: str) -> Path:
+def build_criticism(primary_id: str, path: Path) -> Path:
+    """Build a pack of criticism from {'title', 'author', 'language', 'paragraphs'}, linked to its book."""
+    if not (PACKS / f"{primary_id}.json").exists():
+        sys.exit(f"No built pack {primary_id}; companion_to must name one in packs/")
+    return make_pack(json.loads(path.read_text()), f"criticism-{primary_id}", "Public-domain criticism", "",
+                     companion_to=primary_id)
+
+
+def make_pack(text: dict, book_id: str, edition: str, source_url: str, companion_to: str | None = None) -> Path:
     paragraphs = text["paragraphs"]
     words = sum(len(p.split()) for p in paragraphs)
     print(f"{text['title']} by {text['author']} ({edition}): {words:,} words")
@@ -106,6 +115,8 @@ def make_pack(text: dict, book_id: str, edition: str, source_url: str) -> Path:
         "summary": seg.get("summary") or "", "playlist_prompts": seg.get("playlist_prompts") or {},
         "secondary": [], "blocks": blocks,
     }
+    if companion_to:
+        pack["companion_to"] = companion_to
     annotate.annotate(pack)
     add_secondary(pack)
     PACKS.mkdir(exist_ok=True)
@@ -208,6 +219,11 @@ def main() -> None:
                            parents=[device])
     local.add_argument("paths", nargs="+", type=Path)
     local.add_argument("--no-push", action="store_true")
+    crit = sub.add_parser("criticism", help="build a criticism pack linked to a built book and push it",
+                          parents=[device])
+    crit.add_argument("primary", help="pack id of the book, e.g. gutenberg-1342")
+    crit.add_argument("file", type=Path, help="JSON with title, author, language and paragraphs ('## ' headings)")
+    crit.add_argument("--no-push", action="store_true")
     sub.add_parser("send", help="copy files into the Boox library").add_argument("paths", nargs="+", type=Path)
     starter = sub.add_parser("starter", help="build and push the starter shelf", parents=[device])
     starter.add_argument("--no-push", action="store_true")
@@ -246,6 +262,10 @@ def main() -> None:
         print(f"Total Claude cost this run: ${Usage.cost:.3f}")
         if not args.no_push:
             push(paths)
+    elif args.command == "criticism":
+        path = build_criticism(args.primary, args.file.expanduser())
+        if not args.no_push:
+            push([path])
     elif args.command == "send":
         send([path.expanduser() for path in args.paths])
     elif args.command == "starter":

@@ -53,5 +53,7 @@ it finds there on launch.
   `packer/trusted-sources.toml`, best first. `kind` is `video`, `audio` (with
   `audio_url`), `essay` or `book`; `minutes` is missing for books. Videos of 10 minutes
   or less double as video blocks on Today.
+- `companion_to` (optional) is the id of the book a criticism pack is about. Its book
+  screen and the book's screen link to each other.
 - Packs built before trusted sources have `videos` (book level and per block) from a
   broad YouTube search instead. The app still shows them; `./pack sources` replaces them.
