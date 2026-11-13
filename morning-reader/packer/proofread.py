@@ -20,7 +20,7 @@ WORKERS = 12
 LIGATURES = {"ﬀ": "ff", "ﬁ": "fi", "ﬂ": "fl", "ﬃ": "ffi", "ﬄ": "ffl", "ﬅ": "st", "ﬆ": "st"}
 RULES = [
     (re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f�]"), ""),     # control characters
-    (re.compile(r"(?<=[\w,;.!?’”')])\s*(?<!-)--(?!-)\s*(?=[\w‘“'(])"), "—"),  # typed dash
+    (re.compile(r"(?<![-\s])--(?!-)|(?<=\w) -- (?=\w)"), "—"),           # typed dash
     (re.compile(r"(^|[\s(—])([“‘]) +(?=\w)"), r"\1\2"),            # “ word
     (re.compile(r"(?<=[\w.,;:!?]) +(”)(?=[\s,.;:!?)—]|$)"), r"\1"),  # word ”
     (re.compile(r"(?<=\w)\^(?=[\s,.;:!?’”)]|$)|(?<=\s)\^(?=\w)"), ""),  # footnote carets
@@ -61,12 +61,39 @@ List every instance separately. Return {"edits": []} if the text is clean.
 """
 
 
+def _straight_quotes(text: str) -> str:
+    """Drop the space inside straight double quotes: '" The end, " he said' → '"The end," he said'.
+    Only when the quotes pair up, so a quote running on from the previous paragraph is left alone."""
+    if text.count('"') % 2 or '"' not in text:
+        return text
+    out, opening = [], True
+    for part in re.split(r'(")', text):
+        if part == '"':
+            out.append(part)
+            opening = not opening
+            continue
+        if not opening and part.startswith(" ") and (not out or out[-1] == '"') \
+                and re.match(r" +\w", part) and (len(out) < 2 or re.search(r"(^|[\s(—])$", out[-2])):
+            part = part.lstrip(" ")  # just after an opening quote
+        out.append(part)
+    text = "".join(out)
+    # A space before a closing quote: odd-numbered quotes close.
+    pieces, n = [], 0
+    for part in re.split(r'(")', text):
+        if part == '"':
+            n += 1
+            if n % 2 == 0 and pieces and re.search(r"[\w.,;:!?] +$", pieces[-1]):
+                pieces[-1] = pieces[-1].rstrip(" ")
+        pieces.append(part)
+    return "".join(pieces)
+
+
 def apply_rules(text: str) -> str:
     for lig, plain in LIGATURES.items():
         text = text.replace(lig, plain)
     for pattern, repl in RULES:
         text = pattern.sub(repl, text)
-    return text
+    return _straight_quotes(text)
 
 
 def chunks(pack: dict) -> list[list[dict]]:

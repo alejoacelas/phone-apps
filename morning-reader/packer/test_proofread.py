@@ -9,6 +9,11 @@ class Rules(unittest.TestCase):
         self.assertEqual(apply_rules("conversational power^ The elder"), "conversational power The elder")
         self.assertEqual(apply_rules("ﬁnd the \x03"), "find the ")
         self.assertEqual(apply_rules("2^3 stays"), "2^3 stays")
+        self.assertEqual(apply_rules("he wrote:--'I never'"), "he wrote:—'I never'")
+        self.assertEqual(apply_rules('of " the association of ideas " from which'), 'of "the association of ideas" from which')
+        self.assertEqual(apply_rules('" For the pangs," she says, " there is none."'), '"For the pangs," she says, "there is none."')
+        self.assertEqual(apply_rules('" A quote that runs on'), '" A quote that runs on')
+        self.assertEqual(apply_rules("a ---- rule and x -- y"), "a ---- rule and x—y")
 
 class Edits(unittest.TestCase):
     def pack(self):
