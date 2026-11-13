@@ -24,6 +24,9 @@ RULES = [
     (re.compile(r"(^|[\s(—])([“‘]) +(?=\w)"), r"\1\2"),            # “ word
     (re.compile(r"(?<=[\w.,;:!?]) +(”)(?=[\s,.;:!?)—]|$)"), r"\1"),  # word ”
     (re.compile(r"(?<=\w)\^(?=[\s,.;:!?’”)]|$)|(?<=\s)\^(?=\w)"), ""),  # footnote carets
+    (re.compile(r"‘‘ ?"), "“"),                                     # two single quotes for a double
+    (re.compile(r" ?’’"), "”"),
+    (re.compile(r"(?:\s*\|)+\s*$"), ""),                             # table pipes left at a line end
     (re.compile(r"(?<=\S)  +(?=\S)"), " "),                        # double spaces
 ]
 

@@ -1,8 +1,10 @@
 package com.alejoacelas.morningreader
 
 import android.graphics.Typeface
+import android.text.Layout
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.style.AlignmentSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.TypefaceSpan
 import android.util.TypedValue
@@ -521,6 +523,9 @@ private class BuiltText(val text: CharSequence, val layout: BlockLayout) {
     fun selection(rawStart: Int, rawEnd: Int): Selection? = layout.selection(rawStart, rawEnd)
 }
 
+/** A scene break such as "•", "* * *" or "• • •", shown centred. */
+private val ORNAMENT = Regex("""[\s•*·⁂◆~]+""")
+
 /** A paragraph that is one item of a bulleted or numbered list. */
 private val LIST_ITEM = Regex("""^([•●▪◦–-]|\d{1,2}[.)])\s""")
 
@@ -534,6 +539,9 @@ private fun buildText(font: Typeface, paragraphs: List<String>): BuiltText {
         // The blank line before each paragraph is shorter than a full line, and nearly gone between list items.
         val listed = i > 0 && LIST_ITEM.containsMatchIn(layout.ranges[i].second) && LIST_ITEM.containsMatchIn(layout.ranges[i - 1].second)
         if (i > 0) out.setSpan(RelativeSizeSpan(if (listed) 0.15f else 0.55f), range.first - 1, range.first, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        if (ORNAMENT.matches(layout.ranges[i].second)) {
+            out.setSpan(AlignmentSpan.Standard(Layout.Alignment.ALIGN_CENTER), range.first, range.last, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
         if (layout.headings[i]) {
             val end = range.last
             out.setSpan(TypefaceSpan(bold), range.first, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
