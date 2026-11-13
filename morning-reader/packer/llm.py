@@ -17,6 +17,17 @@ SYSTEM = "Return only valid JSON matching the requested shape. No Markdown fence
 _CWD = tempfile.mkdtemp(prefix="pack-claude-")
 
 
+def _env(name: str) -> str:
+    """A key from the environment or the ignored .env (the YouTube key, for secondary material)."""
+    if os.environ.get(name):
+        return os.environ[name]
+    for line in (ROOT / ".env").read_text().splitlines():
+        key, _, value = line.partition("=")
+        if key.strip() == name:
+            return value.strip()
+    raise RuntimeError(f"{name} missing from environment and .env (see README)")
+
+
 class Usage:
     """Running totals; `local.cost` is per thread so parallel runs can report their own spend.
     Costs are what Claude Code reports at list price; the subscription pays for the calls."""
