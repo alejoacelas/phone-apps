@@ -8,6 +8,7 @@
   ./pack search "wealth of nations"   list matches without building
   ./pack starter                      build and push the starter shelf
   ./pack push                         push every built pack to the phone
+  ./pack proofread [ID ...]           fix typos and layout leftovers in built packs, then push them
   ./pack annotate [ID ...]            add character notes and standalone flags to built packs
   ./pack sources [ID ...]             find secondary material from trusted sources for built packs
   ./pack wishlist                     list the wish list from a Chrome bookmarks folder
@@ -30,7 +31,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import annotate, pdf, secondary, segment, sources, wishlist
+from . import annotate, pdf, proofread, secondary, segment, sources, wishlist
 from .llm import Usage
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -228,6 +229,11 @@ def main() -> None:
     starter = sub.add_parser("starter", help="build and push the starter shelf", parents=[device])
     starter.add_argument("--no-push", action="store_true")
     sub.add_parser("push", help="push all built packs", parents=[device])
+    proof = sub.add_parser("proofread", help="fix typos and layout leftovers in built packs, in place",
+                           parents=[device])
+    proof.add_argument("ids", nargs="*", help="pack ids such as gutenberg-145 (default: every built pack)")
+    proof.add_argument("--rounds", type=int, default=3, help="most Haiku rounds per chunk (default 3)")
+    proof.add_argument("--no-push", action="store_true")
     ann = sub.add_parser("annotate", help="add character notes and standalone flags to built packs")
     ann.add_argument("ids", nargs="*", help="Gutenberg ids (default: every built pack)")
     sub.add_parser("tidy", help="re-apply text cleanup to built packs without rebuilding them")
@@ -316,6 +322,11 @@ def main() -> None:
         run_wishlist(args)
     elif args.command == "push":
         push(sorted(PACKS.glob("*.json")))
+    elif args.command == "proofread":
+        paths = [PACKS / f"{i}.json" for i in args.ids] if args.ids else sorted(PACKS.glob("*.json"))
+        changed = proofread.proofread(paths, rounds=args.rounds)
+        if changed and not args.no_push:
+            push(changed)
     elif args.command == "opml":
         push([args.file], subdir="import")
     elif args.command == "pull":
