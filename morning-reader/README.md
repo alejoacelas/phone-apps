@@ -104,9 +104,10 @@ files each time you ask, so a book bookmarked this morning shows up the next run
 build` to pick the next books from what you've bookmarked. Only public-domain books
 are on Gutenberg, so most modern titles are listed as "not on Gutenberg". Wish-list matching uses Haiku 5.5; results are cached in `cache/wishlist.json`.
 
-Book preparation, Explain and Ask use Opus 5.5 directly through Anthropic. Feed hooks
-and lightweight matching use Haiku 5.5. The packer reports estimated
-list-price cost before the linked monthly API credits.
+Book preparation uses Opus 5.5 through `claude -p` on the Claude subscription, so
+the packer needs a signed-in Claude Code. Explain and Ask in the app call Anthropic
+directly. Feed hooks and lightweight matching use Haiku 5.5. The packer's reported cost
+is Claude Code's list-price estimate, not a bill.
 
 ## Secondary material
 

@@ -1,6 +1,5 @@
+import json
 import unittest
-from unittest.mock import patch
-import httpx
 from . import llm
 
 class ClaudeCalls(unittest.TestCase):
@@ -9,25 +8,19 @@ class ClaudeCalls(unittest.TestCase):
         self.assertEqual(llm.select_model(parallel_calls=21), llm.FAST_MODEL)
         self.assertEqual(llm.select_model(fast=True), llm.FAST_MODEL)
 
-    @patch.object(llm, '_env', return_value='test-only')
-    def test_only_text_is_parsed_and_haiku_disables_thinking(self, _):
-        response = httpx.Response(200, request=httpx.Request('POST', 'https://api.anthropic.com/v1/messages'), json={
-            'content': [{'type':'thinking','thinking':'not json'}, {'type':'text','text':'{"ok":true}'}],
-            'stop_reason':'end_turn', 'usage':{'input_tokens':100,'output_tokens':10}})
-        with patch.object(llm.httpx, 'post', return_value=response) as post:
-            self.assertEqual(llm.ask_json('test', fast=True), {'ok': True})
-            self.assertEqual(post.call_args.kwargs['json']['thinking'], {'type':'disabled'})
-            self.assertNotIn('Authorization',post.call_args.kwargs['headers'])
+    def test_haiku_gets_no_effort_and_no_tools(self):
+        cmd = llm.command(llm.FAST_MODEL, "low")
+        self.assertNotIn("--effort", cmd)
+        self.assertEqual(cmd[cmd.index("--tools") + 1], "")
+        self.assertIn("--effort", llm.command(llm.MODEL, "low"))
 
-    @patch.object(llm, '_env', return_value='test-only')
-    def test_truncation_is_not_accepted_as_success(self, _):
-        response = httpx.Response(200, request=httpx.Request('POST', 'https://api.anthropic.com/v1/messages'), json={
-            'content':[{'type':'text','text':'{}'}], 'stop_reason':'max_tokens'})
-        with patch.object(llm.httpx, 'post', return_value=response):
-            with self.assertRaisesRegex(RuntimeError, 'incomplete'):
-                llm.ask_json('test')
+    def test_fenced_reply_is_parsed(self):
+        out = json.dumps({"subtype": "success", "is_error": False, "result": '```json\n{"ok": true}\n```'})
+        self.assertEqual(llm.parse(out)[0], {"ok": True})
 
-    def test_long_haiku_prompt_price(self):
-        self.assertAlmostEqual(llm.usage_cost({'input_tokens':100001,'output_tokens':1000},llm.FAST_MODEL),.0525005)
+    def test_error_record_is_not_accepted(self):
+        out = json.dumps({"subtype": "error_max_turns", "is_error": True, "result": ""})
+        with self.assertRaisesRegex(RuntimeError, "failed"):
+            llm.parse(out)
 
 if __name__ == '__main__': unittest.main()

@@ -47,7 +47,8 @@ and `YOUTUBE_API_KEY` from the `server-agents` vault, field `credential`, items
 `~/.local/bin/op-agent inject`.
 
 The Anthropic key and GitHub token are compiled into the private APK; never publish
-an APK. Direct Anthropic calls use the monthly API credits linked to Alejandro's
-Projects. Jobs with more than 20 parallel model calls must pass `parallel_calls` to
-`ask_json`, which selects Haiku. Displayed pack costs estimate list price before credits.
-API spending is approved for building packs and rerunning model calls.
+an APK. The app's Explain and Ask call Anthropic directly with the monthly API credits
+linked to Alejandro's Projects. The packer calls Claude through `claude -p` on the Claude
+subscription, never the API key. Jobs with more than 20 parallel model calls must pass
+`parallel_calls` to `ask_json`, which selects Haiku. Building packs and rerunning model
+calls is approved.
