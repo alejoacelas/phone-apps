@@ -13,17 +13,34 @@ class BlockLayout(paragraphs: List<String>) {
     /** Each paragraph's span in [text] (`last` is its end, exclusive) and its shown text. */
     val ranges: List<Pair<IntRange, String>>
     val headings: List<Boolean> = paragraphs.map { it.startsWith("## ") }
+    /** Spans of [text] marked _like this_ in the pack, shown in italics without the underscores. */
+    val italics: List<IntRange>
 
     init {
         val out = StringBuilder()
+        val slanted = mutableListOf<IntRange>()
         ranges = paragraphs.mapIndexed { i, raw ->
             if (i > 0) out.append("\n\n")
-            val shown = if (headings[i]) raw.removePrefix("## ") else raw
             val start = out.length
-            out.append(shown)
-            (start..out.length) to shown
+            var last = 0
+            val body = if (headings[i]) raw.removePrefix("## ") else raw
+            for (m in ITALIC.findAll(body)) {
+                out.append(body, last, m.range.first)
+                val from = out.length
+                out.append(m.groupValues[1])
+                slanted += from until out.length
+                last = m.range.last + 1
+            }
+            out.append(body, last, body.length)
+            (start..out.length) to out.substring(start)
         }
         text = out.toString()
+        italics = slanted
+    }
+
+    companion object {
+        /** _words_ between underscores that aren't part of a word, like snake_case. */
+        private val ITALIC = Regex("""(?<![\w_])_(?=\S)(.+?)(?<=\S)_(?![\w_])""")
     }
 
     /** The selected text, and every paragraph it touches with the selection wrapped in <mark>…</mark>. */

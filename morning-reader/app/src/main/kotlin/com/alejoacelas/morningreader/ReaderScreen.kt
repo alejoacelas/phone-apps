@@ -525,6 +525,8 @@ private fun buildText(font: Typeface, paragraphs: List<String>): BuiltText {
     val layout = BlockLayout(paragraphs)
     val out = SpannableStringBuilder(layout.text)
     val bold = Typeface.create(font, 600, false)
+    val italic = Typeface.create(font, 400, true)
+    layout.italics.forEach { out.setSpan(TypefaceSpan(italic), it.first, it.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
     layout.ranges.forEachIndexed { i, (range, _) ->
         // The blank line before each paragraph is shorter than a full line.
         if (i > 0) out.setSpan(RelativeSizeSpan(0.55f), range.first - 1, range.first, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
